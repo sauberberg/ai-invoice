@@ -1,184 +1,124 @@
-import streamlit as st
-import io
-from PIL import Image
-import pdfplumber
-import pytesseract
-
-st.set_page_config(page_title="Invoice AI", layout="centered")
-st.title("🌍 AI Multi-country Accountant")
-
-country = st.selectbox("Страна", ["Германия", "Польша", "Франция", "Италия"])
-company_type = st.selectbox("Тип юр. лица", ["GmbH", "Freelancer", "SAS", "SRL"])
-vat = st.selectbox("Плательщик НДС?", ["Да", "Нет"])
-language = st.selectbox("Язык", ["Deutsch", "English", "Français", "Polski"])
-
-uploaded_file = st.file_uploader("Загрузите PDF/JPG/PNG", type=["pdf", "jpg", "png", "jpeg"])
-manual_text = st.text_area("Или введите текст вручную", height=140)
-
-def extract_text_from_pdf(pdf_file):
-    text = ""
-    with pdfplumber.open(pdf_file) as pdf:
-        for page in pdf.pages:
-            text += page.extract_text() or ""
-    return text.strip()
-
-def extract_text_from_image(image_file):
-    image = Image.open(image_file)
-    text = pytesseract.image_to_string(image, lang="eng+deu+fra+pol")
-    return text.strip()
-
-invoice_text = ""
-
-if uploaded_file:
-    file_type = uploaded_file.name.split('.')[-1].lower()
-    if file_type == "pdf":
-        invoice_text = extract_text_from_pdf(uploaded_file)
-    elif file_type in ["jpg", "jpeg", "png"]:
-        invoice_text = extract_text_from_image(uploaded_file)
-    if not invoice_text:
-        st.error("Не удалось распознать текст. Попробуйте вручную.")
-elif manual_text:
-    invoice_text = manual_text
-
-if st.button("Продолжить"):
-    if not invoice_text:
-        st.error("Не удалось получить текст для анализа. Проверьте входные данные.")
-    else:
-        st.success("Текст успешно получен. Здесь будет обработка AI и рекомендации.")
-        st.write(invoice_text)
-        # Тут подключай свой AI/LLM вызов и рекомендации, когда всё заработает.
-
-
 import os
-import fitz  # PyMuPDF for PDF text extraction
-import pytesseract
-from PIL import Image
 import streamlit as st
 from dotenv import load_dotenv
 
-# Загрузка переменных окружения (например, OPENAI_API_KEY) из .env
+import fitz  # PyMuPDF for PDF text extraction
+from PIL import Image
+import pytesseract
+
+# 1. Загрузка переменных окружения
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Настройка страницы Streamlit
-st.set_page_config(page_title="DocAnalyzer – OCR и GPT", layout="wide")
+# 2. UI
+st.set_page_config(page_title="Invoice AI", layout="centered")
+st.title("🌍 AI Multi-country Accountant")
 
-st.title("DocAnalyzer: OCR + GPT анализ документа")
-
-# Форма ввода пользовательских данных
 with st.form(key="input_form"):
-    st.subheader("Параметры анализа")
-    country = st.selectbox("Выберите страну", ["Германия", "Польша", "Франция", "Италия"])
-    company_type = st.selectbox("Тип компании", ["GmbH", "Freelancer", "SAS", "SRL"])
-    vat_registered = st.radio("НДС зарегистрирован?", ["Да", "Нет"], index=1)
-    language = st.selectbox("Язык ответа", ["Deutsch", "English", "Français", "Polski"])
-    uploaded_file = st.file_uploader("Загрузите документ (PDF, JPG или PNG)", type=["pdf", "png", "jpg", "jpeg"])
-    manual_text = st.text_area("Или введите текст вручную")
+    country = st.selectbox("Страна", ["Германия", "Польша", "Франция", "Италия"])
+    company_type = st.selectbox("Тип юр. лица", ["GmbH", "Freelancer", "SAS", "SRL"])
+    vat = st.radio("Плательщик НДС?", ["Да", "Нет"])
+    language = st.selectbox("Язык", ["Deutsch", "English", "Français", "Polski"])
+    uploaded_file = st.file_uploader("Загрузите PDF/JPG/PNG", type=["pdf", "jpg", "png", "jpeg"])
+    manual_text = st.text_area("Или введите текст вручную", height=140)
     submit = st.form_submit_button("Продолжить")
 
-# Обработка нажатия на кнопку "Продолжить"
+# 3. Вспомогательные функции
+def extract_text_from_pdf(pdf_file):
+    text = ""
+    try:
+        doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
+        for page in doc:
+            text += page.get_text("text")
+        doc.close()
+    except Exception as e:
+        st.warning(f"Ошибка чтения PDF: {e}")
+    return text.strip()
+
+def extract_text_from_image(image_file, lang_code):
+    try:
+        image = Image.open(image_file)
+        text = pytesseract.image_to_string(image, lang=lang_code)
+    except Exception as e:
+        st.warning(f"Ошибка OCR: {e}")
+        text = ""
+    return text.strip()
+
+# 4. Мэппинг языков для OCR и LLM
+ocr_langs = {"Deutsch": "deu", "English": "eng", "Français": "fra", "Polski": "pol"}
+
+# 5. Обработка сабмита формы
 if submit:
-    # Проверка наличия входных данных (файл или текст)
+    # 5.1 Проверка входа
     if not uploaded_file and not manual_text:
-        st.error("Пожалуйста, загрузите файл или введите текст для анализа.")
+        st.error("Пожалуйста, загрузите файл или введите текст.")
         st.stop()
 
-    # Извлечение текста из загруженного файла, если он предоставлен
     extracted_text = ""
     if uploaded_file:
         file_name = uploaded_file.name.lower()
-        try:
-            if file_name.endswith(".pdf"):
-                # Чтение PDF-файла и извлечение текста со всех страниц
-                file_bytes = uploaded_file.read()
-                doc = fitz.open(stream=file_bytes, filetype="pdf")
-                for page in doc:
-                    extracted_text += page.get_text("text")
-                doc.close()
-            else:
-                # Обработка изображения: использование Tesseract OCR
-                image = Image.open(uploaded_file)
-                # Если выбран язык не English, указываем соответствующий язык для OCR
-                tess_lang = ""
-                if language == "Deutsch":
-                    tess_lang = "deu"
-                elif language == "Français":
-                    tess_lang = "fra"
-                elif language == "Polski":
-                    tess_lang = "pol"
-                else:
-                    tess_lang = "eng"
-                extracted_text = pytesseract.image_to_string(image, lang=tess_lang)
-        except Exception as e:
-            st.error(f"Ошибка при извлечении текста: {e}")
-            st.stop()
+        if file_name.endswith(".pdf"):
+            extracted_text = extract_text_from_pdf(uploaded_file)
+        else:
+            extracted_text = extract_text_from_image(uploaded_file, ocr_langs.get(language, "eng"))
 
-    # Если текст введён вручную, используем его
-    input_text = ""
+    # Если оба есть — дополняем
+    input_text = extracted_text.strip()
     if manual_text:
-        input_text = manual_text
-    # Если был и файл, и текст, объединяем их (например, если пользователь хочет дополнить OCR-текст своим вводом)
-    if extracted_text and input_text:
-        input_text = extracted_text.strip() + "\n" + input_text.strip()
-    elif extracted_text:
-        input_text = extracted_text
+        if input_text:
+            input_text += "\n" + manual_text.strip()
+        else:
+            input_text = manual_text.strip()
 
-    # Проверяем, получен ли текст для анализа
+    # 5.2 Контроль финального текста
     if not input_text:
         st.error("Не удалось получить текст для анализа. Проверьте входные данные.")
         st.stop()
 
-    # Формирование запроса для модели GPT
-    # Включаем параметры: страна, тип компании, НДС и язык ответа
+    # 5.3 Формируем промпт
     prompt = (
         f"Страна: {country}\n"
         f"Тип компании: {company_type}\n"
-        f"НДС зарегистрирован: {vat_registered}\n"
-        f"Задание: Проанализируй текст документа и предоставь краткое резюме и рекомендации. "
+        f"НДС зарегистрирован: {vat}\n"
+        f"Задание: Проанализируй текст документа, выведи резюме, предложи бухгалтерские рекомендации, и сформулируй actionable insights для бизнеса. "
         f"Ответь на языке: {language}.\n"
         f"Текст документа:\n\"\"\"\n{input_text}\n\"\"\""
     )
 
-    # Проверка наличия API-ключа OpenAI
+    # 5.4 Проверка ключа
     if not OPENAI_API_KEY:
-        st.error("API-ключ OpenAI не найден. Укажите OPENAI_API_KEY в файле .env или в настройках.")
+        st.error("API-ключ OpenAI не найден. Укажите OPENAI_API_KEY в .env.")
         st.stop()
 
-    # Инициализация модели OpenAI через LangChain
+    # 5.5 Вызов OpenAI через langchain-openai (или fallback на старый)
     try:
-        # Попытка импорта для новой структуры langchain
-        from langchain_openai import ChatOpenAI
-    except ImportError:
-        # Импорт для старых версий langchain
-        from langchain.chat_models import ChatOpenAI
-    # Создание экземпляра чата (GPT-3.5-Turbo по умолчанию)
-    llm = ChatOpenAI(model_name="gpt-3.5-turbo", openai_api_key=OPENAI_API_KEY, temperature=0.0)
-    
-    # Вызов модели для получения ответа
-    try:
-        # Используем один промпт, модель ожидает список сообщений (система + пользователь)
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            from langchain.chat_models import ChatOpenAI
+
+        llm = ChatOpenAI(
+            model_name="gpt-4o",  # Или gpt-3.5-turbo, если gpt-4o не доступен
+            openai_api_key=OPENAI_API_KEY,
+            temperature=0.0
+        )
+
         from langchain.schema import SystemMessage, HumanMessage
-        system_msg = SystemMessage(content=f"You are a helpful assistant. Provide the answer in {language}.")
+        system_msg = SystemMessage(content=f"You are a professional accountant for EU companies. Answer in {language}.")
         user_msg = HumanMessage(content=prompt)
         ai_response = llm([system_msg, user_msg])
-        result_text = ai_response.content if hasattr(ai_response, 'content') else str(ai_response)
+        result_text = ai_response.content if hasattr(ai_response, "content") else str(ai_response)
     except Exception as e:
-        st.error(f"Ошибка при обращении к модели OpenAI: {e}")
+        st.error(f"Ошибка OpenAI: {e}")
         st.stop()
 
-    # Отображение результата в приложении
-    st.subheader("Результат анализа")
+    # 5.6 Вывод результата и рекомендации
+    st.subheader("Результат анализа и рекомендации")
     st.write(result_text)
 
-    # Формирование файла с результатами для скачивания
-    output_lines = []
-    output_lines.append("### Резюме и рекомендации\n")
-    output_lines.append(result_text.strip())
-    output_content = "\n".join(output_lines)
-    # Кнопка для скачивания результата
     st.download_button(
-        label="Скачать результаты (.txt)",
-        data=output_content,
-        file_name="analysis_result.txt",
+        label="Скачать рекомендации (.txt)",
+        data=result_text,
+        file_name="ai_invoice_recommendations.txt",
         mime="text/plain"
     )
