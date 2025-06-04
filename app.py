@@ -2,7 +2,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Invoice AI", layout="centered")
 
-st.title("🌍 AI Multi-country Accountant")
+st.title("🌍 AI Multi-country Accounting")
 country = st.selectbox("Страна", ["Германия", "Польша", "Франция", "Италия"])
 company_type = st.selectbox("Тип юр. лица", ["GmbH", "Freelancer", "SAS", "SRL"])
 vat = st.selectbox("Плательщик НДС?", ["Да", "Нет"])
