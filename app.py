@@ -5,7 +5,7 @@ import os
 # Загрузка переменных окружения (.env)
 load_dotenv()
 
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
@@ -33,13 +33,17 @@ VAT: {vat}
 {invoice_text}
 """)
 
-llm = ChatOpenAI(model="gpt-4o")
+# Важно! Укажи явно openai_api_key и укажи модель (gpt-4o или gpt-3.5-turbo)
+llm = ChatOpenAI(
+    model="gpt-4o", 
+    openai_api_key=os.getenv("OPENAI_API_KEY")
+)
+
 chain = LLMChain(llm=llm, prompt=prompt)
 
 # Основная AI-кнопка
 if st.button("Извлечь данные AI"):
     with st.spinner("AI-обработка..."):
-        # Если поле invoice_text пустое — покажи ошибку
         if not invoice_text.strip():
             st.error("Пожалуйста, вставьте OCR-текст инвойса!")
         else:
