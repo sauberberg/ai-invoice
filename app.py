@@ -10,7 +10,7 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Настройка страницы Streamlit
-st.set_page_config(page_title="DocAnalyzer – OCR и GPT", layout="wide")
+st.set_page_config(page_title="AI Accounting", layout="wide")
 
 st.title("AI Accounting")
 
