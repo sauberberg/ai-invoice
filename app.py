@@ -12,7 +12,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 # Настройка страницы Streamlit
 st.set_page_config(page_title="DocAnalyzer – OCR и GPT", layout="wide")
 
-st.title("DocAnalyzer: OCR + GPT анализ документа")
+st.title("AI Accounting")
 
 # Форма ввода пользовательских данных
 with st.form(key="input_form"):
