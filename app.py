@@ -2,6 +2,7 @@ import streamlit as st
 from dotenv import load_dotenv
 import os
 
+# Загрузка переменных окружения (.env)
 load_dotenv()
 
 from langchain.chat_models import ChatOpenAI
@@ -19,9 +20,8 @@ language = st.selectbox("Язык", ["Deutsch", "English", "Français", "Polski"
 file = st.file_uploader("Загрузите PDF/JPG/PNG", type=["pdf", "jpg", "png"])
 invoice_text = st.text_area("Или вставьте OCR-текст", height=140)
 
-prompt = PromptTemplate(
-    input_variables=["country", "company_type", "vat", "language", "invoice_text"],
-    template="""
+# Промт для AI
+prompt = PromptTemplate.from_template("""
 Страна: {country}
 Юр. лицо: {company_type}
 VAT: {vat}
@@ -31,17 +31,15 @@ VAT: {vat}
 
 Текст инвойса:
 {invoice_text}
-"""
-)
+""")
 
-llm = ChatOpenAI(
-    model="gpt-3.5-turbo",  # Если gpt-4o недоступен, используй gpt-3.5-turbo
-    openai_api_key=os.getenv("OPENAI_API_KEY")
-)
+llm = ChatOpenAI(model="gpt-4o")
 chain = LLMChain(llm=llm, prompt=prompt)
 
+# Основная AI-кнопка
 if st.button("Извлечь данные AI"):
     with st.spinner("AI-обработка..."):
+        # Если поле invoice_text пустое — покажи ошибку
         if not invoice_text.strip():
             st.error("Пожалуйста, вставьте OCR-текст инвойса!")
         else:
