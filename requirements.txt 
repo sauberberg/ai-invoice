@@ -6,3 +6,7 @@ pydantic==1.10.13
 python-dotenv
 python-dotenv
 python-dotenv
+langchain
+langchain
+langchain
+langchain
