@@ -1,0 +1,4 @@
+tesseract-ocr
+tesseract-ocr-deu
+tesseract-ocr-fra
+tesseract-ocr-pol
