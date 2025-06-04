@@ -1,3 +1,54 @@
+import streamlit as st
+import io
+from PIL import Image
+import pdfplumber
+import pytesseract
+
+st.set_page_config(page_title="Invoice AI", layout="centered")
+st.title("🌍 AI Multi-country Accountant")
+
+country = st.selectbox("Страна", ["Германия", "Польша", "Франция", "Италия"])
+company_type = st.selectbox("Тип юр. лица", ["GmbH", "Freelancer", "SAS", "SRL"])
+vat = st.selectbox("Плательщик НДС?", ["Да", "Нет"])
+language = st.selectbox("Язык", ["Deutsch", "English", "Français", "Polski"])
+
+uploaded_file = st.file_uploader("Загрузите PDF/JPG/PNG", type=["pdf", "jpg", "png", "jpeg"])
+manual_text = st.text_area("Или введите текст вручную", height=140)
+
+def extract_text_from_pdf(pdf_file):
+    text = ""
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text() or ""
+    return text.strip()
+
+def extract_text_from_image(image_file):
+    image = Image.open(image_file)
+    text = pytesseract.image_to_string(image, lang="eng+deu+fra+pol")
+    return text.strip()
+
+invoice_text = ""
+
+if uploaded_file:
+    file_type = uploaded_file.name.split('.')[-1].lower()
+    if file_type == "pdf":
+        invoice_text = extract_text_from_pdf(uploaded_file)
+    elif file_type in ["jpg", "jpeg", "png"]:
+        invoice_text = extract_text_from_image(uploaded_file)
+    if not invoice_text:
+        st.error("Не удалось распознать текст. Попробуйте вручную.")
+elif manual_text:
+    invoice_text = manual_text
+
+if st.button("Продолжить"):
+    if not invoice_text:
+        st.error("Не удалось получить текст для анализа. Проверьте входные данные.")
+    else:
+        st.success("Текст успешно получен. Здесь будет обработка AI и рекомендации.")
+        st.write(invoice_text)
+        # Тут подключай свой AI/LLM вызов и рекомендации, когда всё заработает.
+
+
 import os
 import fitz  # PyMuPDF for PDF text extraction
 import pytesseract
