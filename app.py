@@ -2,12 +2,14 @@ import streamlit as st
 from dotenv import load_dotenv
 import os
 
-# Загрузка переменных окружения (.env)
+# Загружаем .env
 load_dotenv()
 
-from langchain_community.chat_models import ChatOpenAI
+# Вот этот импорт:
+from langchain.chat_models import ChatOpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
+
 
 st.set_page_config(page_title="Invoice AI", layout="centered")
 
