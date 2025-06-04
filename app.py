@@ -36,14 +36,19 @@ VAT: {vat}
 llm = ChatOpenAI(model="gpt-4o")
 chain = LLMChain(llm=llm, prompt=prompt)
 
+# Основная AI-кнопка
 if st.button("Извлечь данные AI"):
     with st.spinner("AI-обработка..."):
-        result = chain.run(
-            country=country,
-            company_type=company_type,
-            vat=vat,
-            language=language,
-            invoice_text=invoice_text
-        )
-        st.success("✅ Данные извлечены AI!")
-        st.json(result)
+        # Если поле invoice_text пустое — покажи ошибку
+        if not invoice_text.strip():
+            st.error("Пожалуйста, вставьте OCR-текст инвойса!")
+        else:
+            result = chain.run(
+                country=country,
+                company_type=company_type,
+                vat=vat,
+                language=language,
+                invoice_text=invoice_text
+            )
+            st.success("✅ Данные извлечены AI!")
+            st.json(result)
