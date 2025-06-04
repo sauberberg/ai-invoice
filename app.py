@@ -53,5 +53,5 @@ if st.button("Извлечь данные AI"):
                 language=language,
                 invoice_text=invoice_text
             )
-            st.success("✅ Данные извлечены AI!")
+            st.success("✅ Данные извлечены AI")
             st.json(result)
