@@ -3,4 +3,5 @@ python-dotenv
 openai==1.13.3
 langchain==0.1.16
 langchain_community==0.0.34
+langsmith==0.1.23
 pydantic==1.10.13
